@@ -1,0 +1,21 @@
+Go는 삼항 연산자를 지원하지 않음
+
+명시적 형변환 방식 : 자료형(변수)
+
+## 문자열 -> 다른 자료형 형변환 함수 종류
+strconv.ParseBool(str) : 문자열을 bool 값으로 파싱
+                       - 인식되는 문자열 값 : "true", "false", "TRUE", "FALSE", "True", "False", "T", "F", "0", "1"
+        ParseFloat(str, size) : 지정할 크기의 부동 소수점 값으로 파싱
+        ParseInt(str, base, size) : 지정한 밑(base) 및 크기(size)를 사용하여 int64로 파싱
+                                  - 허용하는 밑(base) 값 : 2, 8, 16, 10 (진수들)
+        ParseUint(str, base, size) : 지정한 밑(base) 및 크기(size)를 사용해 문자열을 "부호 없는 정수 값"으로 파싱
+        Atoi(str) : 밑 10을 사용하여 int 으로 변환
+
+## 문자열 값 포매팅 함수 종류
+strconv.FormatBool(val) : 지정한 bool의 값(val)에 따라 true or false 문자열 반환
+        FormatInt(var, base) : 지정한 밑(base)으로 표현한 int64 값의 문자열 표현 반환 
+        FormatUint(var, base) : 지정한 밑(base)으로 표현한 uint64 값의 문자열 표현 반환
+        FormatFloat(val, format, precision, size) : 지정된 형식(format), 정밀도(precision) 및 크기(size)를 사용하여 표현한 float64 값의 문자열 표현 반환
+                                                    format : 문자열 포맷 지정하는 바이트 값
+                                                             일반적으로 rune 문자 값으로 표시 (f, e, E, g, G)
+        Itoa(val) : 밑 10을 사용하여 표현한 int 값의 문자열 표현 반환
