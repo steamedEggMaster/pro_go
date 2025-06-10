@@ -1,0 +1,21 @@
+int
+uint : 양의 정수
+byte : 데이터 바이트 (uint8의 별칭)
+float32, float64
+complex64, complex128 : 실수 및 허구 구성 요소
+bool
+string
+rune : 단일 유니코드 포인트 (int32의 별칭)
+
+## 형변환
+상수(const)는 타입 선언 X 시 자동 형변환 가능함
+변수는 타입 선언 or 선언 X 전부 자동 형변환 지원 X
+
+## 변수 기본값
+int : 0
+uint : 0
+byte : 0
+float64 : 0
+bool : false
+string : ""
+rune : 0
