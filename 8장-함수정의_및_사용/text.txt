@@ -1,0 +1,16 @@
+1. 가변 매개 변수
+func func4(price string, products ...string) {
+	// products는 슬라이스임
+	// 인수 제공이 안될 수 있는데 ex) func4(1004)
+	// 이때 products == nil 이기 때문에 로직에 따라 위험할 수 있음
+	// => if else 처리를 해줄 것
+}
+// 이미 존재하는 슬라이스를 main -> func4로 넘길땐 ...을 붙이자
+// => func4("1004", slice...)
+
+2. 변수가 선언된 함수 결과
+func func8(price int) (tax int) {
+	tax = price * 20
+	// 결과로 정의된 변수를 내부에서 사용 가능!!
+	return tax
+}
