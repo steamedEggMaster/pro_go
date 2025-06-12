@@ -1,3 +1,3 @@
-module moduleName
+module functions
 
 go 1.24.3

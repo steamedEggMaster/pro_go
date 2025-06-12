@@ -1,3 +1,3 @@
-module moduleName
+module structs
 
 go 1.24.3
