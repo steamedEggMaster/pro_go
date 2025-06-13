@@ -240,6 +240,7 @@ func main() {
 	fmt.Println("12. 빈 인터페이스 사용")
 
 	// 빈 인터페이스는 여러 타입을 넣을 수 있음
+	// => 구현해야할 메서드가 없기에 가능
 	data := []interface{}{
 		expense,
 		Product{"kayak", "WaterSports", 275},
