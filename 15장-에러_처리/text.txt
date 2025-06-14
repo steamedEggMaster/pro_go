@@ -1,0 +1,4 @@
+1. Go는 error라는 미리 정의된 인터페이스 제공
+   // type error interface {
+   //   Error() string
+   // }
