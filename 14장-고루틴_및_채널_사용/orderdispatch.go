@@ -14,7 +14,7 @@ type DispatchNotification struct {
 
 var Customers = []string{"Alice", "Bob", "Charlie", "Dora"}
 
-func DispatchOrders(channel chan DispatchNotification) {
+func DispatchOrders(channel chan<- DispatchNotification) {
 	rand.Seed(time.Now().UTC().UnixNano())
 	orderCount := rand.Intn(3) + 2
 	fmt.Println("Order count:", orderCount)
@@ -24,6 +24,10 @@ func DispatchOrders(channel chan DispatchNotification) {
 			Quantity: rand.Intn(10),
 			Product:  ProductList[rand.Intn(len(ProductList)-1)],
 		}
+		// if i == 1 {
+		// 	notification := <-channel
+		// 	fmt.Println("Read:", notification.Customer)
+		// }
 	}
 
 	close(channel)

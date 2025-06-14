@@ -9,3 +9,30 @@
    -> 이에 대한 해결책으로 
       1. close(channel)과 for { if details, open := <-dispatchChannel; open {} }
       2. for details := range dispatchChannel
+
+3. 채널의 방향 제한
+   1. chan<-
+      - 예시 : channel chan<- DispatchNotification 이 의미하는것
+              : channel은 어떠한 대상이 아니고, 채널은 실체가 없는 통로일 뿐임
+                => 채널로 보내는 것만 가능하다.
+                => 채널이 우측이 입구고, 좌측이 출구일때
+                   채널로 들어가는 우측 입구만 활성화된다.
+                   => 즉, notification := <-channel과 같은 좌측 출구에 관한 내용이 들어가선 안된다.
+    
+              => 해당 함수 외부에서 channel := make(chan DispatchNotification)을 만들고
+                 넘긴 것이기에, 외부에서는 notification := <-channel 과 같은 출구 연산이 가능하다.
+   2. <-chan
+      : 반대로 출구 연산만 가능하다
+    
+   3. 하지만 주고 받는 객체를 나누지 않으면 명확한 구분이 힘들기 때문에
+      1. 변수로 만들기
+	  // var sendOnlyChannel chan<- DispatchNotification = dispatchChannel
+	  // var receiveOnlyChannel <-chan DispatchNotification = dispatchChannel
+      // go DispatchOrders(sendOnlyChannel) // 보낼 수만 있는
+	  // receiveDispatches(receiveOnlyChannel) // 받을 수만 있는
+      
+      2. 명시적 형변환
+	  // go DispatchOrders(chan<- DispatchNotification(dispatchChannel))
+	  // receiveDispatches((<-chan DispatchNotification)(dispatchChannel))
+      
+      처리하면 더 명확하다.
