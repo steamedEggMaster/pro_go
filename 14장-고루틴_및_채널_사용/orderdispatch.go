@@ -16,7 +16,7 @@ var Customers = []string{"Alice", "Bob", "Charlie", "Dora"}
 
 func DispatchOrders(channel chan<- DispatchNotification) {
 	rand.Seed(time.Now().UTC().UnixNano())
-	orderCount := rand.Intn(3) + 2
+	orderCount := rand.Intn(5) + 5
 	fmt.Println("Order count:", orderCount)
 	for i := 0; i < orderCount; i++ {
 		channel <- DispatchNotification{
@@ -28,6 +28,7 @@ func DispatchOrders(channel chan<- DispatchNotification) {
 		// 	notification := <-channel
 		// 	fmt.Println("Read:", notification.Customer)
 		// }
+		time.Sleep(time.Millisecond * 750)
 	}
 
 	close(channel)
