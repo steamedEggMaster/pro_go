@@ -5,17 +5,27 @@ import "fmt"
 type CategoryCountMessage struct {
 	Category string
 	Count    int
+
+	// 고루틴 패닉 복구 2
+	TerminalError interface{}
 }
 
+// 고루틴 패닉 복구 1, 2
 func processCategories(categories []string, outChan chan<- CategoryCountMessage) {
 	defer func() {
 		if arg := recover(); arg != nil {
-			fmt.Println(arg)
+			// fmt.Println(arg)
+
 			// 1. 간단하게 채널 닫아 main에서 생기는 데드락 방지하기
-			close(outChan)
+			// close(outChan)
 			// 여기서 close를 해주지 않으면
 			// main 함수에서 기다리기에 데드락이 발생하게 됨
 
+			// 2. 종료되기 전 이유를 채널에 넘기고 종료하기
+			outChan <- CategoryCountMessage{
+				TerminalError: arg,
+			}
+			close(outChan)
 		}
 	}()
 
@@ -110,13 +120,27 @@ func main() {
 	// 	}
 	// }
 
-	// -------------- 고루틴 패닉 복구 ---------------
+	// -------------- 고루틴 패닉 복구 1 ---------------
+	// categories := []string{"Watersports", "Chess", "Running"}
+
+	// channel := make(chan CategoryCountMessage)
+	// go processCategories(categories, channel)
+
+	// for message := range channel {
+	// 	fmt.Println(message.Category, "Total :", message.Count)
+	// }
+
+	// -------------- 고루틴 패닉 복구 2 ---------------
 	categories := []string{"Watersports", "Chess", "Running"}
 
 	channel := make(chan CategoryCountMessage)
 	go processCategories(categories, channel)
 
 	for message := range channel {
-		fmt.Println(message.Category, "Total :", message.Count)
+		if message.TerminalError == nil {
+			fmt.Println(message.Category, "Total :", message.Count)
+		} else {
+			fmt.Println(message.TerminalError)
+		}
 	}
 }

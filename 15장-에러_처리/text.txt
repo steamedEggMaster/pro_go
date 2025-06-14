@@ -18,8 +18,8 @@
 4. 패닉 복구
    recover() : defer로 호출되는 함수 안에서 동작해야함
                => panic()이 불리면 모든 defer를 부르기에 복구함수(recover)도 부르게됨
-   - panic() 함수에는 어떤 값도 들어갈 수 있기 때문에 매개변수가 interface{}임
-     => recover의 반환값도 interface{}가됨
+   - panic() 함수에는 어떤 값도 들어갈 수 있기 때문에 매개변수가 any임
+     => recover의 반환값이 interface{}가됨
      => 내부 값을 사용하기 위해선 타입 단언을 해야함 
         - err, ok := arg.(error)
    
