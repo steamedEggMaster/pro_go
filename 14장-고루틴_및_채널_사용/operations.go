@@ -12,8 +12,11 @@ func CalcStoreTotal(data ProductData) {
 		go group.TotalPrice(category, channel)
 	}
 	time.Sleep(time.Second * 5)
+
+	fmt.Println("-Starting to receive from channel")
 	for i := 0; i < len(data); i++ {
-		fmt.Println("-- channel read pending")
+		fmt.Println(len(channel), cap(channel))
+		fmt.Println("-- channel read pending", len(channel), "items in buffer, size:", cap(channel))
 		value := <-channel
 		fmt.Println("-- channel read complete", value)
 		storeTotal += value
