@@ -7,7 +7,7 @@ import (
 
 func CalcStoreTotal(data ProductData) {
 	var storeTotal float64
-	var channel chan float64 = make(chan float64)
+	var channel chan float64 = make(chan float64, 2)
 	for category, group := range data {
 		go group.TotalPrice(category, channel)
 	}
