@@ -12,12 +12,39 @@ import (
 // 	fmt.Println("Channel has been closed")
 // }
 
-func enumerateProducts(channel chan<- *Product) {
-	for _, p := range ProductList[:3] {
-		channel <- p
-		time.Sleep(time.Microsecond * 800)
+// func enumerateProducts(channel chan<- *Product) {
+// 	for _, p := range ProductList[:3] {
+// 		channel <- p
+// 		time.Sleep(time.Microsecond * 800)
+// 	}
+// 	close(channel)
+// }
+
+// select 문 - 블로킹 없는 전송
+// func enumerateProducts(channel chan<- *Product) {
+// 	for _, p := range ProductList[:3] {
+// 		select {
+// 		case channel <- p:
+// 			fmt.Println("Sent Product:", p.Name)
+// 		default:
+// 			fmt.Println("Discarding product:", p.Name)
+// 			time.Sleep(time.Second)
+// 		}
+// 	}
+// 	close(channel)
+// }
+
+func enumerateProducts(channel1, channel2 chan<- *Product) {
+	for _, p := range ProductList {
+		select {
+		case channel1 <- p:
+			fmt.Println("Sent via channel 1")
+		case channel2 <- p:
+			fmt.Println("Sent via channel 2")
+		}
 	}
-	close(channel)
+	close(channel1)
+	close(channel2)
 }
 
 func main() {
@@ -84,41 +111,68 @@ func main() {
 	//	fmt.Println("All values received")
 
 	// -------- select 문 - 여러 채널로 수신 ---------
-	dispatchChannel := make(chan DispatchNotification, 100)
-	go DispatchOrders(chan<- DispatchNotification(dispatchChannel))
-	productChannel := make(chan *Product)
-	go enumerateProducts(productChannel)
+	// 	dispatchChannel := make(chan DispatchNotification, 100)
+	// 	go DispatchOrders(chan<- DispatchNotification(dispatchChannel))
+	// 	productChannel := make(chan *Product)
+	// 	go enumerateProducts(productChannel)
 
-	openChannels := 2
+	// 	openChannels := 2
 
-	for {
-		select {
-		case details, ok := <-dispatchChannel:
-			if ok {
-				fmt.Println("Dispatch to", details.Customer, ":", details.Quantity, "x", details.Product.Name)
-			} else {
-				fmt.Println("Dispatch channel has been closed")
-				dispatchChannel = nil
-				openChannels--
-			}
-		case product, ok := <-productChannel:
-			if ok {
-				fmt.Println("Product:", product.Name)
-			} else {
-				fmt.Println("Product channel has been closed")
-				productChannel = nil
-				// 이것을 하지 않으면
-				// 채널이 닫혀도 select문에 의해 해당 case가 계속 실행됨
-				openChannels--
-			}
-		default:
-			if openChannels == 0 {
-				goto alldone
-			}
-			fmt.Println("-- No message ready to be received")
-			time.Sleep(time.Millisecond * 500)
-		}
+	//	for {
+	//		select {
+	//		case details, ok := <-dispatchChannel:
+	//			if ok {
+	//				fmt.Println("Dispatch to", details.Customer, ":", details.Quantity, "x", details.Product.Name)
+	//			} else {
+	//				fmt.Println("Dispatch channel has been closed")
+	//				dispatchChannel = nil
+	//				openChannels--
+	//			}
+	//		case product, ok := <-productChannel:
+	//			if ok {
+	//				fmt.Println("Product:", product.Name)
+	//			} else {
+	//				fmt.Println("Product channel has been closed")
+	//				productChannel = nil
+	//				// 이것을 하지 않으면
+	//				// 채널이 닫혀도 select문에 의해 해당 case가 계속 실행됨
+	//				openChannels--
+	//			}
+	//		default:
+	//			if openChannels == 0 {
+	//				goto alldone
+	//			}
+	//			fmt.Println("-- No message ready to be received")
+	//			time.Sleep(time.Millisecond * 500)
+	//		}
+	//	}
+	//
+	// alldone:
+	//
+	//	fmt.Println("All values received")
+
+	// -------- select 문 - 블로킹 없는 전송 --------------
+	// 위에 함수 있음
+	// productChannel := make(chan *Product, 5)
+	// go enumerateProducts(productChannel)
+
+	// time.Sleep(time.Second)
+
+	// for p := range productChannel {
+	// 	fmt.Println("Received product:", p.Name)
+	// }
+
+	// -------- Select 문 - 여러 채널로 전송 -------------
+	c1 := make(chan *Product, 2)
+	c2 := make(chan *Product, 2)
+	go enumerateProducts(c1, c2)
+
+	time.Sleep(time.Second)
+
+	for p := range c1 {
+		fmt.Println("Channel 1 received product:", p.Name)
 	}
-alldone:
-	fmt.Println("All values received")
+	for p := range c2 {
+		fmt.Println("Channel 2 received product:", p.Name)
+	}
 }
