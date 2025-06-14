@@ -1,3 +1,9 @@
 1. 모든 Go 프로그램은 적어도 하나의 고루틴을 사용
    main 함수 진입점에서 명령문 실행을 시작하는 고루틴 생성
    main 고루틴은 한번에 하나의 명령문을 실행해 경로를 따라 동기적으로 코드 동작
+
+2. Go 런타임은 모든 고루틴을 블로킹한 경우, 프로그램 종료
+   -> 활성 고루틴이 없음을 감지하고 애플리케이션 종료
+   fatal error: all goroutines are asleep - deadlock!
+
+   -> 이에 대한 해결책으로 close(channel)과 details, open := <-dispatchChannel; 을 사용하기
