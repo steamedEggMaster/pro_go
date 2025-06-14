@@ -2,6 +2,39 @@ package main
 
 import "fmt"
 
+type CategoryCountMessage struct {
+	Category string
+	Count    int
+}
+
+func processCategories(categories []string, outChan chan<- CategoryCountMessage) {
+	defer func() {
+		if arg := recover(); arg != nil {
+			fmt.Println(arg)
+			// 1. 간단하게 채널 닫아 main에서 생기는 데드락 방지하기
+			close(outChan)
+			// 여기서 close를 해주지 않으면
+			// main 함수에서 기다리기에 데드락이 발생하게 됨
+
+		}
+	}()
+
+	channel := make(chan ChannelMessage, 10)
+	go Products.TotalPriceAsync(categories, channel)
+	for message := range channel {
+		if message.CategoryError == nil {
+			outChan <- CategoryCountMessage{
+				Category: message.Category,
+				Count:    int(message.Total),
+			}
+		} else {
+			panic(message.CategoryError)
+		}
+	}
+	close(outChan)
+	// 이건 panic 발생 후 실행되지 않음
+}
+
 func main() {
 	// categories := []string{"Watersports", "Chess", "Running"}
 
@@ -47,33 +80,43 @@ func main() {
 	// }
 
 	// ------------- 패닉 복구 ----------------
-	recoveryFunc := func() {
-		if arg := recover(); arg != nil {
-			if err, ok := arg.(error); ok {
-				fmt.Println("Error:", err.Error())
-				panic(err) // 디시 패닉 호출
-			} else if str, ok := arg.(string); ok {
-				fmt.Println("Message:", str)
-			} else {
-				fmt.Println("Panic recovered")
-			}
-		}
-	}
-	defer recoveryFunc()
+	// recoveryFunc := func() {
+	// 	if arg := recover(); arg != nil {
+	// 		if err, ok := arg.(error); ok {
+	// 			fmt.Println("Error:", err.Error())
+	// 			panic(err) // 디시 패닉 호출
+	// 		} else if str, ok := arg.(string); ok {
+	// 			fmt.Println("Message:", str)
+	// 		} else {
+	// 			fmt.Println("Panic recovered")
+	// 		}
+	// 	}
+	// }
+	// defer recoveryFunc()
 
+	// categories := []string{"Watersports", "Chess", "Running"}
+
+	// channel := make(chan ChannelMessage, 10)
+
+	// go Products.TotalPriceAsync(categories, channel)
+
+	// for message := range channel {
+	// 	if message.CategoryError == nil {
+	// 		fmt.Println(message.Category, "Total :", ToCurrency(message.Total))
+	// 	} else {
+	// 		panic(message.CategoryError)
+	// 		// panic()과 error를 함께 호출하는 것은 유용한 방법
+	// 		// panic : 함수 실행 중지 및 모든 defer 함수 실행 및 종료
+	// 	}
+	// }
+
+	// -------------- 고루틴 패닉 복구 ---------------
 	categories := []string{"Watersports", "Chess", "Running"}
 
-	channel := make(chan ChannelMessage, 10)
-
-	go Products.TotalPriceAsync(categories, channel)
+	channel := make(chan CategoryCountMessage)
+	go processCategories(categories, channel)
 
 	for message := range channel {
-		if message.CategoryError == nil {
-			fmt.Println(message.Category, "Total :", ToCurrency(message.Total))
-		} else {
-			panic(message.CategoryError)
-			// panic()과 error를 함께 호출하는 것은 유용한 방법
-			// panic : 함수 실행 중지 및 모든 defer 함수 실행 및 종료
-		}
+		fmt.Println(message.Category, "Total :", message.Count)
 	}
 }
