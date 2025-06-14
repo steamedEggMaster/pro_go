@@ -10,14 +10,22 @@ func main() {
 	// fmt.Println("main function complete")
 
 	// ------- 미정 개수 값 전송 및 수신 ---------
+	// dispatchChannel := make(chan DispatchNotification, 100)
+	// go DispatchOrders(dispatchChannel)
+	// for {
+	// 	if details, open := <-dispatchChannel; open {
+	// 		fmt.Println("Dispatch to", details.Customer, ":", details.Quantity, "x", details.Product.Name)
+	// 	} else {
+	// 		fmt.Println("Channel has been closed")
+	// 		break
+	// 	}
+	// }
+
+	// ------------ 채널 값 열거 -------------
 	dispatchChannel := make(chan DispatchNotification, 100)
 	go DispatchOrders(dispatchChannel)
-	for {
-		if details, open := <-dispatchChannel; open {
-			fmt.Println("Dispatch to", details.Customer, ":", details.Quantity, "x", details.Product.Name)
-		} else {
-			fmt.Println("Channel has been closed")
-			break
-		}
+	for details := range dispatchChannel {
+		fmt.Println("Dispatch to", details.Customer, ":", details.Quantity, "x", details.Product.Name)
 	}
+	fmt.Println("Channel has been closed")
 }

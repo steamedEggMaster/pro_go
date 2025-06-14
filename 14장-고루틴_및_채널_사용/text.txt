@@ -6,4 +6,6 @@
    -> 활성 고루틴이 없음을 감지하고 애플리케이션 종료
    fatal error: all goroutines are asleep - deadlock!
 
-   -> 이에 대한 해결책으로 close(channel)과 details, open := <-dispatchChannel; 을 사용하기
+   -> 이에 대한 해결책으로 
+      1. close(channel)과 for { if details, open := <-dispatchChannel; open {} }
+      2. for details := range dispatchChannel
