@@ -130,4 +130,4 @@ f                       fmt.Printf("%E\n", 12.34)  // 1.234000E+01
       .SscanIn(str, ...vals)             : 
       .Sscanf(str, template, ...vals)    : 
    
-   => 결과 : 읽은 값의 개수, errors 
+   => 결과 : 읽은 값의 개수, error
