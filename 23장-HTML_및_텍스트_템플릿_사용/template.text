@@ -1,0 +1,67 @@
+##### 템플릿 로딩 및 실행
+1. 템플릿 파일 로딩을 위한 html/template 함수
+   template.ParseFiles(...files) (*template.Template, error) : 하나 이상의 HTML 템플릿 파일을 로딩
+                                                               - 첫 번째 파일이 "루트 템플릿"으로 설정됨
+           .ParseGlob(pattern) (*template.Template, error)   : 와일드카드 패턴으로 여러 템플릿 파일을 한 번에 로딩
+                                                               - 내부적으로 filepath.Glob() 사용
+                                                               - 로드한 첫 번째 파일이 예상한 파일이 아닐 수 있으니 주의해야함
+
+2. 템플릿 선택과 실행을 위한 *template.Template의 메서드
+   t.Templates() []*template.Template                  : 현재 *template.Template에 등록된 모든 하위 템플릿 목록 반환
+    .Lookup(name) *template.Template                   : name에 해당하는 하위 템플릿 찾아 반환 / 없을 시 nil 반환
+    .Name() string                                     : 현재 *template.Template 객체의 이름 반환
+                                                         - 템플릿 내부에서 {{ define "name" }}의 name 의미
+    .Execute(writer, data interface{}) error           : 루트 템플릿을 사용하여 data를 적용하고 writer에 쓰기
+    .ExecuteTemplate(writer, templateName, data) error : name에 해당하는 템플릿을 사용한 Execute()
+                                                         - 레이아웃 + 콘텐츠 구성이 있는 경우, 특정 템플릿만 선택 실행 가능한 기능
+
+3. 템플릿 액션
+   {{ value }}, {{ expr }}                        : 데이터 값 또는 표현식 결과를 템플릿에 삽입
+                                                    - 기간은 Execute 또는 ExecuteTmplate 함수에 전달된 데이터 값 참조 시 사용
+   {{ value.fieldname }}                          : 구조체 필드 값 삽입
+   {{ value.method arg }}                         : 메서드 호출 후 결과를 템플릿 출력에 삽입
+                                                    - 괄호는 사용하지 않고, 인수는 공백으로 구분
+   {{ func arg }}                                 : 함수를 호출하고 결과를 템플릿 출력에 삽입
+                                                    - 데이터 값 포매팅과 같은 작업을 위한 내장 함수 또는 사용자 지정 함수 정의 가능
+   {{ expr | value.method }}                      ⬇️
+   {{ expr | func }}                              : 첫 번째 표현식 결과를 두 번째 표현식의 마지막 별표로 사용 가능하도록 함 (파이프 구문)
+   {{ range value }} ••• {{ end }}                : 지정한 슬라이스 반복
+                                                    - 기간 동안 액세스 가능한 현재 요소와 함께 중첩 콘텐츠 내의 액션 실행
+   {{ range value }} ••• {{ else }} ••• {{ end }} : ⬆️랑 유사.
+                                                    - 슬라이스가 요소를 포함하고 있지 않은 경우 사용하는 중첨 콘텐츠 섹션 정의
+   {{ if expr }} ••• {{ end }}                    : 표현식 평가 후, 결과가 true인 경우, 중첩 템플릿 콘텐츠 실행
+                                                    - 해당 액션은 optionalelse와 else if 절과 함께 사용 가능
+   {{ with expr }} ••• {{ end }}                  : 표현식 평가 후, 결과가 nil 또는 빈 문자열이 아닌 경우, 중첩 템플릿 콘텐츠 실행
+   {{ define "name" }} ••• {{ end }}              : 지정한 이름으로 템플릿 정의
+                                                    - 다른 템플릿에서 불러올 수 있게됨
+   {{ template "name" expr }}                     : 지정한 이름 및 데이터로 템플릿 실행 후, 결과를 템플릿 출력에 삽입
+   {{ block "name" expr }} ••• {{ end }}          : define과 유사하지만, 다른 파일에서 로드한 템플릿으로 교체할 수 있는 템플릿 정의 시 사용 (오버라이드)
+
+3-1. 템플릿에 값 삽입을 위한 템플릿 표현식
+     1. .               : Execute 또는 ExecuteTemplate 메서드에 전달한 값을 템플릿 출력에 삽입
+                          ex) Execute(w, "index", user) 로 넘긴다면 .은 user 전체를 의미
+                              => user가 context가 됨
+     2. .Field          : 현재 context가 구조체 또는 맵일 때, 해당 필드 or 키에 접근
+                          - 구조체의 exported 필드여야 함
+     3. .Method         : 현재 context가 갖는 인자 없는 메서드 호출 후, 템플릿 출력에 삽입
+     4. .Method arg     :          ''          있는           ''
+                          - 단, 템플릿 안에서는 한 개의 인자만 전달 가능
+     5. call .Field arg : call 키워드를 사용하여, 공백으로 구분하는 지정 인수를 통해 "구조체 함수 필드" 호출 후 결과를 템플릿 출력에 삽입
+
+4. 데이터 포매팅을 위한 내장 템플릿 함수
+   print    : 전달된 값을 문자열로 이어 붙여 출력
+              - 여러 인자도 허용됨
+              ex) {{ print "이름: " .Name }}  → 이름: 해피
+   printf   : 포맷 문자열을 사용하여 출력
+              ex) <h1>Discount Price: {{ .ApplyDiscount 10 | printf "$%.2f" }} </h1>
+                  <h1>Discount Price: {{ printf "$%.2f" (.ApplyDiscount 10) }} </h1>
+              => 둘은 동일한 설정
+   println  : print와 유사하지만, 각 인자 사이 공백 추가 및 줄바꿈 포함됨
+   html     : HTML 특수 문자 (<, >, &, ") 등을 HTML 엔티티로 이스케이프
+   js       : 문자열을 JavaScript 코드 안에서 사용 가능하게 JS 문자열로 이스케이프
+              ex) <script>
+                      var msg = {{ js .Message }};
+                  </script>
+   urlquery : URL의 쿼리 파라미터로 사용될 수 있게 URL 인코딩
+              ex) <a href="/search?q={{ urlquery .Keyword }}">
+
