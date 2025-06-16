@@ -31,3 +31,4 @@
                 - 채널을 닫는 것은 아님
                 - 반드시 호출해줘야 "고루틴 리소스 누수 방지가 가능"함
       .Reset(duration) : 기존 Ticker를 중지시키고, duration에 맞게 재설정한 Ticker 반환
+
