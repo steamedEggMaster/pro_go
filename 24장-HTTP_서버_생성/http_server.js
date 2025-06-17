@@ -13,7 +13,7 @@
           - w는 클라이언트에 응답 보낼 때 사용
           - r은 클라이언트 요청을 담고 있음
 
-2. Request 구조체가 정의한 기본 필드
+2. Request 구조체가 정의한 필드
    1. Method string       : HTTP 메서드를 문자열로 제공
                             - net/http 패키지는 MethodGet, MethodPost와 같은 상수 정의
    2. URL *url.URL        : 요청한 URL의 경로, 쿼리 스트링 등을 포함한 구조체 반환
@@ -28,6 +28,9 @@
                             - ‼️‼️직접 읽고 나면 다시 읽을 수 없음‼️‼️
                             - 복사는 가능
                             - Reader 인터페이스의 Read 메서드와 Closer 인터페이스의 Close 메서드를 결합한 인터페이스인 ReadCloser 반환
+   8. ContentLength int64       : int64 값을 사용하여 Content-Length 헤더를 설정하기 위해 사용
+                                  - 알 수 없으면 -1로 설정
+   9. TransferEncoding []string : 전송 인코딩 방식을 담는 Transfer-Encoding 헤더를 설정하기 위해 사용
 
 ##### 요청 필터링 및 응답 생성
 1. URL 구조체가 정의한 유용한 필드 및 메서드
