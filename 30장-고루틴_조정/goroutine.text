@@ -1,0 +1,135 @@
+##### 대기 그룹 사용
+1. sync 패키지의 WaitGroup 구조체가 정의한 메서드
+   wg.Add(delta int) : delta만큼 대기 중인 고루틴의 개수 증가시킴
+                       - WaitGroup은 대기 고루틴의 카운터가 음수가 되면 panic이 발생함
+                         => Done() 메서드를 조기에 호출하는 것을 방지하기 위해
+                            고루틴 시작 전 Add() 호출하는 것이 중요
+     .Done()         : 작업을 마친 고루틴에서 호출하여 대기 카운트 하나 줄임
+                       - 내부적으로 wg.Add(-1)
+     .Wait()         : Add()로 설정한 개수만큼 Done()이 호출될 때까지 블로킹
+                       - 보통 메인 고루틴에서 호출하여 모든 작업 완료를 기다림
+
+2. 복제 함정 피하기
+   - WaitGroup 값을 복사하지 않는 것이 중요함.
+     => 고루틴이 다른 값에 대해 Done과 Wait을 호출한다는 것을 의미하기 때문
+     => 함수에 넘겨야 한다면 ‼️반드시 포인터로‼️
+
+
+##### 상호 배제 사용
+: 여러 고루틴이 하나의 변수에 접근하며 발생하는 문제를 해결하기 위함
+
+1. sync 패키지의 Mutext 구조체 메서드
+   m.Lock()   : 해당 뮤텍스를 잠금 상태로 만듬
+                - 다른 고루틴이 해당 뮤텍스를 잠근 상태라면,
+                  해제될 때까지 블로킹됨
+    .Unlock() : 잠금 상태를 해제하여, 다른 고루틴이 잠금을 획득할 수 있게함
+                - 반드시 Lock()과 쌍으로 사용해야함
+   
+   => 너무 큰 코드 섹션을 잠그게 되면 블로킹으로 인한 "성능 저하"가 발생할 수 있기에,
+      ‼️공유 데이터에 액세스하는 명령문만 잠글 것‼️
+
+2. 뮤텍스 함정 피하기  
+   1. 공유 데이터에 액세스하는 모든 코드가 동일한 Mutex를 사용하는지 확인
+   2. Lock과 Unlock의 균형
+
+3. 읽기-쓰기 뮤텍스 사용
+   : RWMutex 구조체는 Reader와 Writer로 나누어,
+     여러 Reader가 동시에 잠금을 획득하거나,
+     단일 Writer가 잠금을 획득할 수 있다.
+3-1. RWMutex 구조체가 정의하는 메서드
+     rwm.RLock()   : 읽기 잠금
+                     - "여러 고루틴"이 동시에 호출 가능
+                     - 쓰기 잠금 중일 경우엔 블로킹됨
+        .RUnlock() : RLock() 해제
+                     - 읽기 잠금 해제하지 않을 경우,
+                       쓰기 잠금이 영원이 대기할 수 있으니 주의
+        .Lock()    : 쓰기 잠금
+                     - 읽기/쓰기 어떤 잠금도 걸려있다면 대기
+                     - 획득 시 "단독 접근"
+        .Unlock()  : Lock() 해제
+                     - 반드시 해제!!
+        .RLocker() Locker : sync.Locker 인터페이스를 구현한 "읽기 전용" 락 객체 반환
+                            - 이를 통해,
+                              인터페이스 기반 코드에서 읽기 전용 락 사용 가능
+
+
+##### 고루틴 조정을 위한 조건 사용
+1. Cond 값을 생성하기 위한 snyc 패키지 함수
+   sync.NewCond(*locker) *sync.Cond : 조건변수(Condition Variable) 생성 함수
+                                      - Cond는 특정 조건이 만족될 때까지 고루틴을 기다리게 하고,
+                                        조건 만족 시,
+                                        "다른 고루틴이 신호를 보내" 깨울 수 있도록 돕는 구조체 
+                                      - sync.Locker를 넘겨야하기에,
+                                        *sync.Mutext 또는 RWMutex.RLocker()를 넣음
+
+1-1. Locker 인터페이스가 정의한 메서드
+     Locker.Lock()   : Locker가 관리하는 잠금 획득
+                       - 다른 고루틴이 잠금을 가지고 있다면, 해제될 때까지 블로킹
+           .Unlock() : Locker가 관리하는 잠금 해제
+
+1-2. sync.Cond 구조체가 정의한 필드 및 메서드
+     c.L           : sync.Locker 인터페이스
+                     - Cond가 사용할 잠금 객체 (*sync.Mutex 또는 RWMutex.RLocker() 등)
+      .Wait()      : 잠금 해제 후 조건을 기다리는 고루틴을 대기 상태로 전환
+                     - 내부 동작 1. Unlock() 실행 (다른 고루틴이 조건 변경 가능케함)
+                               2. 조건 변수에 대해 대기 상태로 진입
+                               3. Signal() 또는 Broadcast() 호출 시 자동으로 Lock 다시 획득 후 재개
+      .Signal()    : 기다리는 고루틴 중 하나를 랜덤으로 깨움
+                     - 나머지는 대기
+      .Broadcast() : 모든 기다리는 고루틴 깨움
+
+
+##### 함수 단일 실행 보장
+- 위의 예제에 대한 다른 접근 방식 - sync.Once 구조체 사용
+
+1. sync.Once 구조체의 메서드
+   o.Do(func) : 지정한 함수를 한 번만 실행
+                - 고루틴이 여러 번 호출해도, 한번 이후엔 무시됨
+                - 주로 초기화 코드(init), 싱글톤, 리소스 설정 등에 사용됨
+                - func 안에서 panic이 발생해도 다시 시도 불가 🚫
+
+
+##### 콘텍스트 사용
+- Go를 사용하면 클라이언트를 대신하여 요청을 수신하고,
+  자체 고루틴에서 처리하는 서버 앱을 쉽게 만들 수 있음
+
+1. context.Context 인터페이스가 정의한 메서드
+   Context.Value(key any) any                       : Context에 저장된 키에 매칭되는 값 반환
+                                                      - 주로 요청 단위의 값(ex: userID, traceID) 전달 시 사용
+                                                      - key는 비교 가능한 값이어야하며,
+                                                        커스텀 타입을 권장함
+          .Done() <-chan struct{}                   : Context가 종료(최소되거나, 타임아웃)될 때 닫히는 채널
+                                                      => 취소 알림을 받을 때 사용 가능한 채널이 반환됨
+                                                      - select에서 감시할 때, 취소 시점을 비동기적으로 감지 가능
+                                                      ex) ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+                                                          defer cancel()
+
+                                                          select {
+                                                          case <-ctx.Done():
+                                                             fmt.Println("작업 중단:", ctx.Err())
+                                                          case <-time.After(1 * time.Second):
+                                                             fmt.Println("정상 작업 완료")
+                                                          }
+          .Deadline() (deadline time.Time, ok bool) : Context에 설정된 만료 시각 반환
+                                                      - ok : 타임아웃이 설정되어 있는지 여부
+          .Err() error                              : Context가 종료된 이유(Done 채널이 신호를 받은 이유) 반환
+                                                      - context 패키지에는 error 비교 시 사용 가능한 2가지 변수 정의되어 있음
+                                                        1. context.Canceled         : 수동 취소
+                                                        2.        .DeadlineExceeded : 타임아웃 발생
+
+2. context.Context 값 생성을 위한 context 패키지 함수
+   context.Background() Context : 가장 기초적인 빈 컨텍스트
+                                  - 최상위(루트) 컨텍스트로 사용되며 다른 콘텍스트를 파생하는 역할
+                                  - 자체 취소 or 값 없음
+                                  - 보통 main(), Init(), test 함수에서 시작점으로 사용
+                                  - 아래 함수들의 1번 인자를 만들기 위해 사용됨
+          .WithCancel(parent Context) (Context, CancelFunc)                                 : 수동 취소 가능한 컨텍스트 생성
+                                                                                              - CancelFunc() 호출 시, 해당 컨텍스트 및 하위 컨텍스트들도 모두 취소됨
+          .WithDeadline(parent Context, deadline time.Time) (Context, CancelFunc)           : 데드라인까지 유효한 컨텍스트 생성
+                                                                                              - 시간 지나면 자동으로 Done() 채널이 닫힘
+          .WithTimeout(parent Context, timeout time.Duration) (context.Context, CancelFunc) : 지정된 지속시간 후 취소되는 컨텍스트 생성
+          .WithValue(parent Context, key, val interface{}) context.Context                  : 키-값 쌍을 저장하고 전파 가능한 컨텍스트 생성
+                                                                                              - 값은 ctx.Value(key)로 꺼냄
+                                                                                              - 데이터 전파용 ‼️
+                                                                                                => 비즈니스 로직 전달용으로 남용 금지 (userID, traceID 등만 추천)
+                                                                                             ex) ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
